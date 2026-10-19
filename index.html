@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gs Transkriptor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+      body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0b0f; color: #f3f4f6; }
+      .font-cinzel { font-family: 'Cinzel', serif; }
+      .gold-gradient { background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .gold-border { border-color: #d4af37; }
+      .gold-bg { background: linear-gradient(135deg, #d4af37 0%, #aa771c 100%); }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [files, setFiles] = React.useState([
+                { id: 1, name: "Conferencia_Magistral_2026.mp4", size: "1.2 GB", type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4", author: "Oscar" },
+                { id: 2, name: "Entrevista_Exclusiva_Audio.mp3", size: "450 MB", type: "audio", url: "https://www.w3schools.com/html/horse.mp3", author: "Admin" },
+                { id: 3, name: "Manual_Tecnico_Oficial.pdf", size: "15 MB", type: "pdf", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", author: "Equipo" }
+            ]);
+            const [viewMode, setViewMode] = React.useState('all');
+            const [searchTerm, setSearchTerm] = React.useState('');
+            const [selectedFile, setSelectedFile] = React.useState(null);
+            const [previewModal, setPreviewModal] = React.useState(null);
+            const [downloadModal, setDownloadModal] = React.useState(null);
+            const [password, setPassword] = React.useState('');
+            const [downloadPass, setDownloadPass] = React.useState('amigos123');
+            const [settingsOpen, setSettingsOpen] = React.useState(false);
+            const [newPass, setNewPass] = React.useState('');
+            const [logoImg, setLogoImg] = React.useState(null);
+            const [uploading, setUploading] = React.useState(false);
+            const [uploadProgress, setUploadProgress] = React.useState(0);
+
+            const handleFileSelect = (e) => {
+                const f = e.target.files[0];
+                if (!f) return;
+                setUploading(true);
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 15;
+                    if (progress > 100) progress = 100;
+                    setUploadProgress(progress);
+                    if (progress === 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            let type = 'pdf';
+                            if (f.type.includes('video')) type = 'video';
+                            if (f.type.includes('audio')) type = 'audio';
+                            const newEntry = {
+                                id: Date.now(),
+                                name: f.name,
+                                size: (f.size / (1024*1024*1024)).toFixed(2) + ' GB',
+                                type: type,
+                                url: URL.createObjectURL(f),
+                                author: 'Tú'
+                            };
+                            setFiles([newEntry, ...files]);
+                            setUploading(false);
+                            setUploadProgress(0);
+                        }, 500);
+                    }
+                }, 300);
+            };
+
+            const handleLogoUpload = (e) => {
+                const f = e.target.files[0];
+                if (f) {
+                    setLogoImg(URL.createObjectURL(f));
+                }
+            };
+
+            const verifyDownload = (e) => {
+                e.preventDefault();
+                if (password === downloadPass) {
+                    alert('¡Contraseña correcta! Iniciando descarga...');
+                    const a = document.createElement('a');
+                    a.href = downloadModal.url;
+                    a.download = downloadModal.name;
+                    a.click();
+                    setDownloadModal(null);
+                    setPassword('');
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            };
+
+            const filteredFiles = files.filter(f => {
+                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || f.author.toLowerCase().includes(searchTerm.toLowerCase());
+                if (viewMode === 'all') return matchesSearch;
+                return matchesSearch && f.type === viewMode;
+            });
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-6">
+                    {/* Header */}
+                    <header className="flex items-center justify-between pb-6 border-b border-yellow-600/30">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => document.getElementById('logoInput').click()}>
+                            <div className="w-14 h-14 rounded-full border-2 border-yellow-500 overflow-hidden bg-black flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                                {logoImg ? (
+                                    <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
+                                ) : (
+                                    <i className="fa-solid fa-crown text-yellow-400 text-xl"></i>
+                                )}
+                            </div>
+                            <div>
+                                <h1 className="font-cinzel text-2xl font-bold gold-gradient">Gs Transkriptor</h1>
+                                <p className="text-xs text-yellow-500/80 tracking-widest uppercase">Nube Privada & Archivos 5GB</p>
+                            </div>
+                            <input id="logoInput" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                        </div>
+                        <button onClick={() => setSettingsOpen(true)} className="px-4 py-2 rounded-xl bg-neutral-900 border border-yellow-600/40 text-yellow-400 hover:bg-yellow-500/10 text-sm font-semibold flex items-center gap-2">
+                            <i className="fa-solid fa-gear"></i> Ajustes
+                        </button>
+                    </header>
+
+                    {/* Subida y Buscador */}
+                    <div className="my-6 space-y-4">
+                        <div className="border-2 border-dashed border-yellow-600/40 rounded-2xl p-6 text-center bg-neutral-900/50 hover:border-yellow-400 transition relative">
+                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileSelect} />
+                            {uploading ? (
+                                <div className="space-y-2">
+                                    <p className="text-yellow-400 font-semibold">Subiendo archivo ({uploadProgress}%)...</p>
+                                    <div className="w-full bg-neutral-800 rounded-full h-2.5">
+                                        <div className="gold-bg h-2.5 rounded-full transition-all duration-300" style={{width: `${uploadProgress}%`}}></div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <i className="fa-solid fa-cloud-arrow-up text-4xl text-yellow-500 mb-2"></i>
+                                    <p className="font-semibold text-neutral-200">Toca aquí para subir Videos (hasta 5GB), Audios o PDFs</p>
+                                    <p className="text-xs text-neutral-400 mt-1">Soporte nativo optimizado para archivos pesados</p>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <i className="fa-solid fa-search absolute left-4 top-3.5 text-neutral-400"></i>
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar por nombre o autor..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-11 pr-4 py-3 text-neutral-200 focus:outline-none focus:border-yellow-500"
+                                />
+                            </div>
+                            <div className="flex gap-1 bg-neutral-900 p-1 rounded-xl border border-neutral-800 overflow-x-auto">
+                                {['all', 'video', 'audio', 'pdf'].map(m => (
+                                    <button 
+                                        key={m} 
+                                        onClick={() => setViewMode(m)}
+                                        className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase transition ${viewMode === m ? 'gold-bg text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
+                                    >
+                                        {m === 'all' ? 'Todos' : m}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Lista de Archivos */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredFiles.map(file => (
+                            <div key={file.id} className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between hover:border-yellow-600/50 transition">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs uppercase px-2.5 py-1 rounded-md bg-yellow-500/10 text-yellow-400 font-bold border border-yellow-500/20">
+                                            {file.type}
+                                        </span>
+                                        <span className="text-xs text-neutral-400">{file.size}</span>
+                                    </div>
+                                    <h3 className="font-semibold text-neutral-100 truncate mb-1" title={file.name}>{file.name}</h3>
+                                    <p className="text-xs text-neutral-400 mb-4">Subido por: <span className="text-yellow-400">{file.author}</span></p>
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t border-neutral-800">
+                                    <button 
+                                        onClick={() => setPreviewModal(file)}
+                                        className="flex-1 py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-yellow-400 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                                    >
+                                        <i className="fa-solid fa-eye"></i> Vista Previa
+                                    </button>
+                                    <button 
+                                        onClick={() => setDownloadModal(file)}
+                                        className="flex-1 py-2 px-3 rounded-xl gold-bg text-black text-xs font-bold flex items-center justify-center gap-2 transition hover:opacity-90"
+                                    >
+                                        <i className="fa-solid fa-download"></i> Descargar
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Modal Vista Previa */}
+                    {previewModal && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                            <div className="bg-neutral-900 border border-yellow-600/40 rounded-2xl w-full max-w-xl p-6 relative">
+                                <button onClick={() => setPreviewModal(null)} className="absolute top-4 right-4 text-neutral-400 hover:text-white text-lg">
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                                <h3 className="font-cinzel text-lg font-bold text-yellow-400 mb-4 truncate">{previewModal.name}</h3>
+                                <div className="bg-black rounded-xl overflow-hidden flex items-center justify-center min-h-[250px] mb-4 border border-neutral-800">
+                                    {previewModal.type === 'video' && (
+                                        <video src={previewModal.url} controls className="w-full max-h-[350px] object-contain"></video>
+                                    )}
+                                    {previewModal.type === 'audio' && (
+                                        <div className="p-6 text-center w-full">
+                                            <i className="fa-solid fa-music text-5xl text-yellow-500 mb-4 animate-bounce"></i>
+                                            <audio src={previewModal.url} controls className="w-full"></audio>
+                                        </div>
+                                    )}
+                                    {previewModal.type === 'pdf' && (
+                                        <iframe src={previewModal.url} className="w-full h-[350px] bg-white"></iframe>
+                                    )}
+                                </div>
+                                <button onClick={() => setPreviewModal(null)} className="w-full py-2.5 rounded-xl bg-neutral-800 text-white font-semibold text-sm">
+                                    Cerrar Vista Previa
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal Contraseña Descarga */}
+                    {downloadModal && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                            <div className="bg-neutral-900 border border-yellow-600/40 rounded-2xl w-full max-w-md p-6 relative">
+                                <button onClick={() => setDownloadModal(null)} className="absolute top-4 right-4 text-neutral-400 hover:text-white text-lg">
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                                <div className="text-center mb-6">
+                                    <div className="w-12 h-12 rounded-full gold-bg flex items-center justify-center mx-auto mb-3 text-black font-bold">
+                                        <i className="fa-solid fa-lock"></i>
+                                    </div>
+                                    <h3 className="font-cinzel text-xl font-bold text-white">Protegido por Contraseña</h3>
+                                    <p className="text-xs text-neutral-400 mt-1">Ingresa la clave para descargar: {downloadModal.name}</p>
+                                </div>
+                                <form onSubmit={verifyDownload} className="space-y-4">
+                                    <input 
+                                        type="password" 
+                                        placeholder="Contraseña de descarga" 
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 text-center tracking-widest"
+                                        autoFocus
+                                    />
+                                    <button type="submit" className="w-full py-3 rounded-xl gold-bg text-black font-bold hover:opacity-90 transition">
+                                        Confirmar Descarga
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal Ajustes */}
+                    {settingsOpen && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                            <div className="bg-neutral-900 border border-yellow-600/40 rounded-2xl w-full max-w-md p-6 relative">
+                                <button onClick={() => setSettingsOpen(false)} className="absolute top-4 right-4 text-neutral-400 hover:text-white text-lg">
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                                <h3 className="font-cinzel text-lg font-bold text-yellow-400 mb-4">Ajustes de Seguridad</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs text-neutral-400 block mb-1">Cambiar contraseña de descarga actual</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Nueva contraseña" 
+                                            value={newPass}
+                                            onChange={(e) => setNewPass(e.target.value)}
+                                            className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if (newPass.trim()) {
+                                                setDownloadPass(newPass);
+                                                setNewPass('');
+                                                setSettingsOpen(false);
+                                                alert('¡Contraseña actualizada con éxito!');
+                                            }
+                                        }}
+                                        className="w-full py-2.5 rounded-xl gold-bg text-black font-bold text-sm hover:opacity-90 transition"
+                                    >
+                                        Guardar Nueva Contraseña
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
