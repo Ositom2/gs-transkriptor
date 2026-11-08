@@ -32,8 +32,8 @@ def run_flask():
     app_flask.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
 
 def keep_alive():
-t = Thread(target=run_flask)
-t.start()
+    t = Thread(target=run_flask)
+    t.start()
 
 def crear_pdf_predica(texto, nombre_archivo="Predica_Transcripcion.pdf"):
 c = canvas.Canvas(nombre_archivo, pagesize=letter)
@@ -87,5 +87,5 @@ print("🚀 ¡BOT EN LÍNEA EN RENDER!")
 
 app.run_polling(drop_pending_updates=True)
 
-if name == 'main':
+if__name__=='__main__':
 main()
