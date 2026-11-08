@@ -44,11 +44,11 @@ def crear_pdf_predica(texto, nombre_archivo="Predica_Transcripcion.pdf"):
 
     y = alto - 85
     for parrafo in texto.split('\n'):
-    c.drawString(54, y, parrafo[:90])
-    y -= 20
-    if y < 50:
-    c.showPage()
-    y = alto - 50
+        c.drawString(54, y, parrafo[:90])
+        y -= 20
+        if y < 50:
+        c.showPage()
+        y = alto - 50
     c.save()
     return nombre_archivo
 
