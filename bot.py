@@ -12,7 +12,7 @@ from reportlab.pdfgen import canvas
 
 nest_asyncio.apply()
 
-Configuración de tokens y credenciales
+#Configuración de tokens y credenciales
 p1 = "9203844689:AAGsPlkc"
 p2 = "zptgie_Z4AgoDipHc1nZ7e5B6p8"
 TELEGRAM_TOKEN = p1 + p2
@@ -21,7 +21,7 @@ GEMINI_API_KEY = "AQ.Ab8RN6KXoD1gtnkEknlSVas68aeqpew5L-9Iw7WSpBdv0vKeWg"
 genai.configure(api_key=GEMINI_API_KEY)
 logging.basicConfig(level=logging.INFO)
 
-Servidor Flask mínimo para cumplir con Render y mantener el puerto abierto
+#Servidor Flask mínimo para cumplir con Render y mantener el puerto abierto
 app_flask = Flask('')
 
 @app_flask.route('/')
