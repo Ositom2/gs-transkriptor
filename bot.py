@@ -36,21 +36,21 @@ def keep_alive():
     t.start()
 
 def crear_pdf_predica(texto, nombre_archivo="Predica_Transcripcion.pdf"):
-c = canvas.Canvas(nombre_archivo, pagesize=letter)
-ancho, alto = letter
-c.setFont("Helvetica-Bold", 16)
-c.drawCentredString(ancho / 2, alto - 40, "Transcripción de Prédica GS")
-c.setFont("Helvetica", 11)
+    c = canvas.Canvas(nombre_archivo, pagesize=letter)
+    ancho, alto = letter
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(ancho / 2, alto - 40, "Transcripción de Prédica GS")
+    c.setFont("Helvetica", 11)
 
-y = alto - 85
-for parrafo in texto.split('\n'):
-c.drawString(54, y, parrafo[:90])
-y -= 20
-if y < 50:
-c.showPage()
-y = alto - 50
-c.save()
-return nombre_archivo
+    y = alto - 85
+    for parrafo in texto.split('\n'):
+    c.drawString(54, y, parrafo[:90])
+    y -= 20
+    if y < 50:
+    c.showPage()
+    y = alto - 50
+    c.save()
+    return nombre_archivo
 
 async def manejar_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 mensaje = update.message
