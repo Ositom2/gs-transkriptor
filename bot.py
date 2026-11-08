@@ -26,7 +26,7 @@ app_flask = Flask('')
 
 @app_flask.route('/')
 def home():
-return "¡Bot de transcripción activo 24/7!"
+    return "¡Bot de transcripción activo 24/7!"
 
 def run_flask():
 app_flask.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
