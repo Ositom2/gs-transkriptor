@@ -78,14 +78,14 @@ async def manejar_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
 # Levantar el servidor web para Render en segundo plano
-keep_alive()
+    keep_alive()
 
 # Iniciar el bot de Telegram
-app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-app.add_handler(MessageHandler(filters.AUDIO | filters.VOICE, manejar_audio))
-print("🚀 ¡BOT EN LÍNEA EN RENDER!")
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(MessageHandler(filters.AUDIO | filters.VOICE, manejar_audio))
+    print("🚀 ¡BOT EN LÍNEA EN RENDER!")
 
-app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 if__name__=='__main__':
-main()
+    main()
