@@ -1,6 +1,6 @@
 import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 import google.generativeai as genai
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -44,6 +44,9 @@ def crear_pdf_predica(texto, nombre_archivo="Predica.pdf"):
     c.save()
     return nombre_archivo
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("¡Hola! Envíame un audio o nota de voz y te lo transcribiré a PDF.")
+
 async def manejar_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mensaje = update.message
     audio = mensaje.audio or mensaje.voice
@@ -74,6 +77,7 @@ def main():
 
     # Iniciar el bot de Telegram
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.AUDIO, manejar_audio))
     print("🚀 ¡BOT EN LÍNEA EN RENDER!")
 
