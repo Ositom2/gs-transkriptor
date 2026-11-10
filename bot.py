@@ -58,24 +58,24 @@ async def manejar_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not audio:
         await mensaje.reply_text("Envíame un audio válido.")
         return
-    
-    status = await mensaje.reply_text("🎧 Procesando audio en la nube...")
+
+    status = await mensaje.reply_text("🎧 Procesando...")
     try:
-    f = await context.bot.get_file(audio.file_id)
-    await f.download_to_drive("temp_audio.mp3")
-    
-    audio_ref = genai.upload_file("temp_audio.mp3")
-    modelo = genai.GenerativeModel("gemini-1.5-flash")
-    resp = modelo.generate_content(["Transcribe esta prédica en español:", audio_ref])
-    
-    pdf = crear_pdf_predica(resp.text)
-    await mensaje.reply_document(document=open(pdf, 'rb'), filename="Transcripcion.pdf")
-    os.remove("temp_audio.mp3")
-    os.remove(pdf)
-    await status.delete()
+        f = await context.bot.get_file(audio.file_id)
+        await f.download_to_drive("temp_audio.mp3")
+
+        audio_ref = genai.upload_file("temp_audio.mp3")
+        modelo = genai.GenerativeModel("gemini-1.5-flash")
+        resp = modelo.generate_content(["Transcribe este audio exactamente en texto:", audio_ref])
+
+        pdf = crear_pdf_predica(resp.text)
+        await mensaje.reply_document(document=open(pdf, "rb"))
+        os.remove("temp_audio.mp3")
+        os.remove(pdf)
+        await status.delete()
     except Exception as e:
-    await status.edit_text(f"❌ Error: {str(e)}")
-    
+        await status.edit_text(f"❌ Error: {str(e)}")
+
 def main():
 # Levantar el servidor web para Render en segundo plano
 keep_alive()
