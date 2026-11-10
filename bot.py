@@ -56,8 +56,8 @@ async def manejar_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mensaje = update.message
     audio = mensaje.audio or mensaje.voice
     if not audio:
-    await mensaje.reply_text("Envíame un audio válido.")
-    return
+        await mensaje.reply_text("Envíame un audio válido.")
+        return
     
     status = await mensaje.reply_text("🎧 Procesando audio en la nube...")
     try:
