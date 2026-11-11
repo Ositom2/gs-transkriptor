@@ -9,7 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-# 1. Configurar Flask para mantener el servicio activo en Render
+# Configurar Flask para mantener el servicio activo en Render
 app = Flask(__name__)
 
 @app.route('/')
@@ -20,13 +20,13 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# 2. Configurar la API de Gemini
+# Configurar la API de Gemini
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 async def start(update, context):
-    await update.message.reply_text("¡Hola! Envíame un archivo de audio y te generaré su transcripción en PDF.")
+    await update.message.reply_text("¡Hola! Envíame un archivo de audio (MP3, nota de voz o documento) y te generaré su transcripción en PDF.")
 
 def generar_pdf(texto, ruta_pdf):
     doc = SimpleDocTemplate(ruta_pdf, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
@@ -50,10 +50,25 @@ def generar_pdf(texto, ruta_pdf):
     doc.build(story)
 
 async def manejar_audio(update, context):
-    mensaje = await update.message.reply_text("📥 Descargando y procesando el audio con Gemini...")
+    mensaje = await update.message.reply_text("📥 Recibiendo y procesando el archivo con Gemini...")
     
     try:
-        archivo_telegram = await update.message.audio.get_file()
+        msg = update.message
+        archivo_telegram = None
+        
+        if msg.audio:
+            archivo_telegram = await msg.audio.get_file()
+        elif msg.voice:
+            archivo_telegram = await msg.voice.get_file()
+        elif msg.document:
+            archivo_telegram = await msg.document.get_file()
+        else:
+            await context.bot.edit_message_text(
+                chat_id=update.effective_chat.id,
+                message_id=mensaje.message_id,
+                text="❌ Por favor, envía un archivo de audio válido."
+            )
+            return
         
         with tempfile.TemporaryDirectory() as temp_dir:
             ruta_audio = os.path.join(temp_dir, "audio_temp.mp3")
@@ -112,7 +127,7 @@ def main():
     application = ApplicationBuilder().token(token).build()
     
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.AUDIO, manejar_audio))
+    application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, manejar_audio))
     
     print("Bot iniciado y escuchando...")
     application.run_polling()
