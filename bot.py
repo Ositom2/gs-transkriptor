@@ -18,9 +18,7 @@ if api_key:
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-URL = os.environ.get("RENDER_EXTERNAL_URL", "https://gs-transcriptor.onrender.com")
 
-# Inicializar la aplicación de Telegram
 application = Application.builder().token(TOKEN).updater(None).build()
 
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -30,24 +28,18 @@ application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.D
 
 @app.route('/')
 def home():
-    return "Bot Transcriptor activo por Webhook"
+    return "Bot activo y funcionando"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     import asyncio
     update = Update.de_json(request.get_json(force=True), application.bot)
-    
     async def process():
         await application.initialize()
         await application.process_update(update)
-        
     asyncio.run(process())
     return "ok"
 
 if __name__ == '__main__':
-    # Configurar el webhook automáticamente al iniciar
-    import requests
-    requests.get(f"https://api.telegram.org/bot{TOKEN}/setWebhook?url={URL}/{TOKEN}")
-    
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
