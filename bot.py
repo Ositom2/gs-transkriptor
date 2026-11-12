@@ -10,33 +10,29 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Configurar Gemini
 api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# Leer el token y verificar que exista
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
-
-if not TOKEN:
-    logger.error("¡ERROR CRÍTICO! No se encontró ningún token de Telegram en las variables de entorno.")
-    exit(1)
+TOKEN = os.environ.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 
 application = Application.builder().token(TOKEN).updater(None).build()
 
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Procesando tu audio...")
+    await update.message.reply_text("Audio recibido. Procesando...")
 
-application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
+application.add_handler(MessageHandler(filters.ALL, handle_audio))
 
 @app.route('/')
 def home():
-    return "Bot activo y funcionando"
+    return "Bot activo"
 
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route('/webhook', methods=["POST"])
 def webhook():
     import asyncio
-    update = Update.de_json(request.get_json(force=True), application.bot)
+    json_data = request.get_json(force=True)
+    logger.info(f"Mensaje recibido de Telegram: {json_data}")
+    update = Update.de_json(json_data, application.bot)
     async def process():
         await application.initialize()
         await application.process_update(update)
