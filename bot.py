@@ -5,6 +5,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from google import genai
+from google.genai import types
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("Por favor, envía un archivo de audio o nota de voz.")
         return
 
-    sent_msg = await message.reply_text("📥 [1/3] Descargando audio desde Telegram...")
+    sent_msg = await message.reply_text("📥 [1/2] Descargando audio...")
 
     temp_audio_path = None
     try:
@@ -32,22 +33,27 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await file_obj.download_to_drive(temp_audio.name)
             temp_audio_path = temp_audio.name
 
-        await sent_msg.edit_text("⬆️ [2/3] Subiendo y procesando con Gemini...")
+        await sent_msg.edit_text("🤖 [2/2] Transcribiendo directamente con Gemini...")
 
-        def process_audio():
-            # Subir archivo usando el cliente oficial
-            uploaded_file = client.files.upload(file=temp_audio_path)
-            # Generar transcripción
+        def process_direct():
+            # Leer el archivo descargado directamente en bytes
+            with open(temp_audio_path, "rb") as f:
+                audio_bytes = f.read()
+
+            # Enviar los bytes directamente usando tu cuenta de pago
             return client.models.generate_content(
                 model="gemini-3.8-flash",
                 contents=[
-                    uploaded_file, 
+                    types.Part.from_bytes(
+                        data=audio_bytes,
+                        mime_type="audio/mp3",
+                    ),
                     "Genera una transcripción detallada, limpia y fiel de este audio en formato de texto."
                 ]
             )
 
-        # Ejecutar en hilo separado con asyncio para no congelar el bot
-        response = await asyncio.to_thread(process_audio)
+        # Ejecutar de forma segura con límite de 60 segundos
+        response = await asyncio.wait_for(asyncio.to_thread(process_direct), timeout=60.0)
         
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
@@ -56,8 +62,13 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(transcript_text) > 4000:
             transcript_text = transcript_text[:4000] + "\n...(cortado por longitud)"
             
-        await sent_msg.edit_text(f"📝 [3/3] **Transcripción exitosa:**\n\n{transcript_text}")
+        await sent_msg.edit_text(f"📝 **Transcripción:**\n\n{transcript_text}")
 
+    except asyncio.TimeoutError:
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+        logger.error("Timeout procesando audio directamente")
+        await sent_msg.edit_text("❌ El servidor tardó demasiado. Intenta de nuevo.")
     except Exception as e:
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
@@ -69,7 +80,7 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio para transcribirlo.")))
     
-    logger.info("Iniciando bot con indicadores de progreso...")
+    logger.info("Iniciando bot con procesamiento directo en bytes...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
