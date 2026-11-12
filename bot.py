@@ -15,8 +15,12 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# Intentar leer el token de cualquier variable disponible
+# Leer el token y verificar que exista
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
+
+if not TOKEN:
+    logger.error("¡ERROR CRÍTICO! No se encontró ningún token de Telegram en las variables de entorno.")
+    exit(1)
 
 application = Application.builder().token(TOKEN).updater(None).build()
 
