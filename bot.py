@@ -24,6 +24,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     sent_msg = await message.reply_text("📥 Audio recibido. Descargando...")
 
+    temp_audio_path = None
     try:
         file_obj = await context.bot.get_file(audio_file.file_id)
         
@@ -34,27 +35,22 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sent_msg.edit_text("🤖 Transcribiendo audio con Gemini...")
 
         def process_with_gemini():
+            # Subir archivo
             uploaded_file = client.files.upload(file=temp_audio_path)
-            # Usar el modelo requerido por la API con reintentos para el error 503
-            for intento in range(4):
-                try:
-                    return client.models.generate_content(
-                        model="gemini-3.8-flash",
-                        contents=[
-                            uploaded_file, 
-                            "Genera una transcripción detallada y limpia de este audio en formato de texto."
-                        ]
-                    )
-                except Exception as api_err:
-                    if "503" in str(api_err) and intento < 3:
-                        import time
-                        time.sleep(3)
-                        continue
-                    raise api_err
+            # Generar contenido con gemini-3.8-flash
+            return client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=[
+                    uploaded_file, 
+                    "Genera una transcripción detallada y limpia de este audio en formato de texto."
+                ]
+            )
 
-        response = await asyncio.to_thread(process_with_gemini)
+        # Envolver en asyncio.wait_for con un límite de 45 segundos para que nunca se quede colgado
+        response = await asyncio.wait_for(asyncio.to_thread(process_with_gemini), timeout=45.0)
         
-        os.remove(temp_audio_path)
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
         
         transcript_text = response.text
         if len(transcript_text) > 4000:
@@ -62,16 +58,23 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         await sent_msg.edit_text(f"📝 **Transcripción:**\n\n{transcript_text}")
 
+    except asyncio.TimeoutError:
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+        logger.error("Timeout procesando audio con Gemini")
+        await sent_msg.edit_text("❌ El servidor tardó demasiado en responder. Por favor, intenta de nuevo.")
     except Exception as e:
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
         logger.error(f"Error procesando audio: {e}")
-        await sent_msg.edit_text(f"❌ Ocurrió un error al procesar el audio: {str(e)}")
+        await sent_msg.edit_text(f"❌ Ocurrió un error: {str(e)}")
 
 def main():
     application = Application.builder().token(TOKEN).build()
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio o nota de voz para transcribirlo.")))
     
-    logger.info("Iniciando bot con gemini-3.8-flash y reintentos...")
+    logger.info("Iniciando bot con control de tiempo...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
