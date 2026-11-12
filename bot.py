@@ -33,11 +33,10 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await sent_msg.edit_text("🤖 Transcribiendo audio con Gemini...")
 
-        # Ejecutar operaciones bloqueantes en un hilo separado para que el bot no se congele
         def process_with_gemini():
             uploaded_file = client.files.upload(file=temp_audio_path)
             return client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-2.0-flash",
                 contents=[
                     uploaded_file, 
                     "Genera una transcripción detallada y limpia de este audio en formato de texto."
@@ -63,7 +62,7 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio o nota de voz para transcribirlo.")))
     
-    logger.info("Iniciando bot con procesamiento asíncrono...")
+    logger.info("Iniciando bot con gemini-2.0-flash...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
