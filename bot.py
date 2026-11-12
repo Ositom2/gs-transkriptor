@@ -1,6 +1,7 @@
 import os
 import logging
 import tempfile
+import asyncio
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from google import genai
@@ -8,7 +9,6 @@ from google import genai
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Inicializar el cliente moderno de Google GenAI
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
@@ -33,17 +33,26 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await message.reply_text("🤖 Transcribiendo audio con Gemini...")
         
-        # Subir archivo usando el cliente moderno
         uploaded_file = client.files.upload(file=temp_audio_path)
         
-        # Generar transcripción con gemini-2.5-flash
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=[
-                uploaded_file, 
-                "Genera una transcripción detallada y limpia de este audio en formato de texto."
-            ]
-        )
+        # Intentar la generación con reintentos automáticos si hay saturación (503)
+        response = None
+        for intento in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-3.8-flash",
+                    contents=[
+                        uploaded_file, 
+                        "Genera una transcripción detallada y limpia de este audio en formato de texto."
+                    ]
+                )
+                break
+            except Exception as api_err:
+                if "503" in str(api_err) and intento < 2:
+                    await message.reply_text("⚠️ Servidor saturado temporalmente, reintentando...")
+                    await asyncio.sleep(4)
+                else:
+                    raise api_err
         
         os.remove(temp_audio_path)
         
@@ -62,7 +71,7 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio o nota de voz para transcribirlo.")))
     
-    logger.info("Iniciando bot con cliente moderno de Google GenAI...")
+    logger.info("Iniciando bot con reintentos automáticos...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
