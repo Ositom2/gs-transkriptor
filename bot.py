@@ -15,9 +15,8 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+# Intentar leer el token de cualquier variable disponible
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 
 application = Application.builder().token(TOKEN).updater(None).build()
 
