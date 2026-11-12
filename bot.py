@@ -3,14 +3,14 @@ import logging
 import tempfile
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
-import google.generativeai as genai
+from google import genai
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Inicializar el cliente moderno de Google GenAI
 api_key = os.environ.get("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 
@@ -22,7 +22,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("Por favor, envía un archivo de audio o nota de voz.")
         return
 
-    await message.reply_text("📥 Audio recibido. Descargando y procesando con Gemini...")
+    await message.reply_text("📥 Audio recibido. Descargando y procesando...")
 
     try:
         file_obj = await context.bot.get_file(audio_file.file_id)
@@ -31,15 +31,19 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await file_obj.download_to_drive(temp_audio.name)
             temp_audio_path = temp_audio.name
 
-        await message.reply_text("🤖 Transcribiendo audio con Inteligencia Artificial...")
+        await message.reply_text("🤖 Transcribiendo audio con Gemini...")
         
-        gemini_file = genai.upload_file(temp_audio_path)
+        # Subir archivo usando el cliente moderno
+        uploaded_file = client.files.upload(file=temp_audio_path)
         
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content([
-            gemini_file, 
-            "Genera una transcripción detallada y limpia de este audio en formato de texto."
-        ])
+        # Generar transcripción con gemini-2.5-flash
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                uploaded_file, 
+                "Genera una transcripción detallada y limpia de este audio en formato de texto."
+            ]
+        )
         
         os.remove(temp_audio_path)
         
@@ -55,11 +59,10 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     application = Application.builder().token(TOKEN).build()
-    # Filtros corregidos para la versión actual de la librería
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio o nota de voz para transcribirlo.")))
     
-    logger.info("Iniciando bot en modo Polling...")
+    logger.info("Iniciando bot con cliente moderno de Google GenAI...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
