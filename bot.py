@@ -38,7 +38,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Generar transcripción con gemini-2.5-flash
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.8-flash",
             contents=[
                 uploaded_file, 
                 "Genera una transcripción detallada y limpia de este audio en formato de texto."
