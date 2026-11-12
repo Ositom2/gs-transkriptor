@@ -32,22 +32,20 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await file_obj.download_to_drive(temp_audio.name)
             temp_audio_path = temp_audio.name
 
-        await sent_msg.edit_text("🤖 Transcribiendo audio con Gemini...")
+        await sent_msg.edit_text("🤖 Transcribiendo audio con Gemini 3.5 Flash-Lite...")
 
         def process_with_gemini():
-            # Subir archivo
             uploaded_file = client.files.upload(file=temp_audio_path)
-            # Generar contenido con gemini-3.8-flash
+            # Usar el modelo ligero y rápido para evitar bloqueos
             return client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-3.5-flash-lite",
                 contents=[
                     uploaded_file, 
                     "Genera una transcripción detallada y limpia de este audio en formato de texto."
                 ]
             )
 
-        # Envolver en asyncio.wait_for con un límite de 45 segundos para que nunca se quede colgado
-        response = await asyncio.wait_for(asyncio.to_thread(process_with_gemini), timeout=45.0)
+        response = await asyncio.wait_for(asyncio.to_thread(process_with_gemini), timeout=30.0)
         
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
@@ -62,7 +60,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
         logger.error("Timeout procesando audio con Gemini")
-        await sent_msg.edit_text("❌ El servidor tardó demasiado en responder. Por favor, intenta de nuevo.")
+        await sent_msg.edit_text("❌ El servidor tardó demasiado. Intenta con un audio más corto.")
     except Exception as e:
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
@@ -74,7 +72,7 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.Document.ALL, handle_audio))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("Envíame un audio o nota de voz para transcribirlo.")))
     
-    logger.info("Iniciando bot con control de tiempo...")
+    logger.info("Iniciando bot con gemini-3.5-flash-lite...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
